@@ -32,9 +32,13 @@
 #define START digitalWrite(CS, HIGH)
 #define END digitalWrite(CS, LOW)
 
+unsigned char buffer[128*64/8];
+
 void peak() {
     digitalWrite(CLOCK, HIGH);
+    delayMicroseconds(1);
     digitalWrite(CLOCK, LOW);
+    delayMicroseconds(1);
 }
 
 void write(unsigned char data) {
@@ -50,9 +54,7 @@ void writeword(unsigned char data) {
 	write(data << 4);
 }
 
-
-int main(int argc, char **argv) {
-	wiringPiSetup () ;
+void lcdInit() {
 	pinMode (CS, OUTPUT) ;
 	pinMode (MOSI, OUTPUT) ;
 	pinMode (CLOCK, OUTPUT) ;
@@ -67,24 +69,47 @@ int main(int argc, char **argv) {
     delay(1);
 	writeword(0b00110110);
     delay(1);
+//	writeword(0b00000011);
+//    delay(1);
 	writeword(0b10000000);
 	writeword(0b10000000);
     delay(1);
 	END;
+}
 
-    delay(100);
+void toggleBuffer() {
+	for (unsigned char line = 0; line <32; line ++) {
+		START;
+		write(0b11111000);
+		writeword(0b10000000 + line);
+		writeword(0b10000000);
+		END;
+
+		START;
+		write(0b11111010);
+		for (unsigned short col = 0; col < 16; col ++) {
+			writeword(0b10011001);
+			//writeword(buffer[line*32+col]);
+		}
+		for (unsigned short col = 0; col < 16; col ++) {
+			writeword(0b01100110);
+			//writeword(buffer[(line+32)*32+col]);
+		}
+		END;
+	}
+}
 
 
+int main(int argc, char **argv) {
+	wiringPiSetup () ;
 
-	START;
-	write(0b11111010);
-	writeword(0b11111111);
-	writeword(0b11111111);
-	writeword(0b11111111);
-	writeword(0b11111111);
-	writeword(0b11111111);
-	writeword(0b11111111);
-	END;
+	for (int i=0;i<128*64/8;i++) 
+		buffer[i] = 0b11111111;
+		
+
+	lcdInit();
+	delay(10);
+	toggleBuffer();
 	
 
 	return 0;
